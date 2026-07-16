@@ -500,3 +500,60 @@ label,fieldset{
   margin-bottom:12px}
 }
 
+.home-page .feature-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:18px;
+  padding-top:0}
+.feature-grid article,.login-card,.db-banner{
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  padding:26px;
+  backdrop-filter:blur(22px)}
+.feature-grid p,.muted,.login-card p,.login-card small{
+  color:var(--muted);
+  line-height:1.7}
+.admin-login{
+  min-height:100vh;
+  display:grid;
+  place-items:center;
+  padding:28px;
+  background:radial-gradient(circle at 20% 10%,rgba(37,99,235,.24),transparent 34%),var(--bg)}
+.login-card{
+  width:min(520px,100%);
+  display:grid;
+  gap:16px}
+.login-card h1{
+  margin:0;
+  font-size:clamp(2rem,6vw,3.8rem);
+  letter-spacing:-.06em}
+.admin-shell[hidden],.admin-login[hidden]{
+  display:none!important}
+.admin-sidebar .brand{
+  color:#fff;
+  margin-bottom:16px}
+.admin-sidebar .btn.ghost{
+  margin-top:20px;
+  background:rgba(255,255,255,.08);
+  color:#fff;
+  border-color:rgba(255,255,255,.18)}
+.db-banner{
+  margin-bottom:18px;
+  color:var(--muted);
+  font-weight:800}
+.admin-header{
+  grid-template-columns:1fr 190px 190px 48px}
+.criteria-list input[type="text"],.criteria-list input:not([type]){
+  min-width:0}
+hr{
+  border:0;
+  border-top:1px solid var(--line);
+  margin:20px 0}
+@media(max-width:900px){
+  .home-page .feature-grid{
+    grid-template-columns:1fr}
+  .admin-header{
+    grid-template-columns:1fr}
+}
