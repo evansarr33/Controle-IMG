@@ -9,6 +9,9 @@ permissions:
 jobs:
   generate-manifest:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: photo-review-site
     steps:
       - name: Récupérer le code
         uses: actions/checkout@v4
