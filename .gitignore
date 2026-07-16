@@ -1,2 +1,6 @@
 .env
 node_modules/
+
+# Firebase Admin / service account private keys (server-side only)
+*service-account*.json
+*firebase-adminsdk*.json

@@ -46,6 +46,12 @@ d'images sur Cloudinary, puis commit/push le fichier généré.
 
 ### 2. Configurer Firebase (stockage des décisions)
 
+> Important : pour `firebase-config.js`, utilise uniquement la **configuration
+> SDK Web** de Firebase. Ne colle jamais un JSON de service account
+> `firebase-adminsdk` ou une `private_key` dans le site : c'est une clé
+> administrateur destinée aux scripts serveur, pas au navigateur. Si une telle
+> clé a été exposée, régénère-la depuis Google Cloud IAM.
+
 1. Va sur [console.firebase.google.com](https://console.firebase.google.com),
    crée un projet (gratuit).
 2. Active **Firestore Database** (mode production).
