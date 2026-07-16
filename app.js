@@ -74,7 +74,16 @@ function cacheEls() {
   els.reserveConfirm = document.getElementById('reserveConfirm');
   els.controls = document.getElementById('controls');
   els.toast = document.getElementById('toast');
+
+  els.viewerImage.addEventListener('error', () => {
+    const img = images[currentIndex];
+    if (!img) return;
+    els.viewerEmpty.hidden = false;
+    els.viewerEmpty.innerHTML = `<p>Image impossible à charger.</p><p class="viewer-empty-sub">Vérifie l'URL dans <code>data/images.json</code> : ${escapeHtml(img.url || 'URL manquante')}</p>`;
+    showToast(`Image introuvable : ${img.public_id}`);
+  });
 }
+
 
 /* ---------------- Firebase ---------------- */
 
@@ -179,7 +188,7 @@ function renderFilmstrip() {
       <img class="frame-thumb" src="${img.thumb_url || img.url}" alt="" loading="lazy">
       <div class="frame-info">
         <div class="frame-index">#${String(i + 1).padStart(3, '0')}</div>
-        <div class="frame-name">${img.public_id}</div>
+        <div class="frame-name">${escapeHtml(img.public_id)}</div>
       </div>
       <div class="frame-dot ${status || ''}"></div>
     `;
@@ -214,6 +223,7 @@ function renderViewer() {
   els.viewerImage.hidden = false;
   els.viewerImage.src = img.url;
   els.viewerImage.alt = img.public_id;
+  els.viewerEmpty.innerHTML = `<p>Aucune image chargée.</p><p class="viewer-empty-sub">Génère <code>data/images.json</code> avec le script d'import, puis recharge la page.</p>`;
 
   const status = reviews[img.public_id]?.status;
   if (status) {
@@ -350,4 +360,14 @@ function showToast(msg) {
   els.toast.hidden = false;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { els.toast.hidden = true; }, 3500);
+}
+
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
 }
