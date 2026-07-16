@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Déposer une demande - AAE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"><link rel="stylesheet" href="style.css">
+</head>
+<body data-page="demande">
+  <nav class="nav-glass"><a class="brand" href="index.html"><span class="brand-logo">AAE</span><span><strong>Demande ordinateur</strong><small>Dossier candidat</small></span></a><div class="nav-links"><a href="index.html">Accueil</a><a href="admin.html">Admin</a><button class="theme-toggle" data-theme type="button">☾</button></div></nav>
+  <main class="section form-layout" id="application">
+    <aside class="steps-panel"><div class="progress-header"><span>Progression</span><strong id="progressPercent">0%</strong></div><div class="progress-track"><div id="progressFill"></div></div><ol class="step-list" id="stepList"></ol></aside>
+    <form class="application-card" id="applicationForm"><div class="form-topline"><div><p class="eyebrow">Questionnaire candidat</p><h1 id="stepTitle">Étape 1 — Identité</h1></div><span class="pill" id="autosavePill">Sauvegarde locale active</span></div><div id="stepContent"></div><div class="form-actions"><button class="btn ghost" id="prevStep" type="button">Précédent</button><button class="btn secondary" id="downloadPdf" type="button">PDF récapitulatif</button><button class="btn primary" id="nextStep" type="button">Suivant</button></div></form>
+    <aside class="decision-panel"><div class="panel-card sticky-card"><p class="eyebrow">Score automatique</p><div class="big-score"><span id="scoreValue">0</span><small>pts</small></div><div class="priority-badge" id="priorityBadge">Priorité 4</div><ul class="score-details" id="scoreDetails"></ul><hr><p class="muted">La demande sera enregistrée dans la collection <strong>demandes</strong>, les pièces dans <strong>pieces_justificatives</strong> et l'historique dans <strong>historique_actions</strong>.</p></div></aside>
+  </main>
+  <div class="toast" id="toast" hidden></div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="supabase-config.js"></script><script src="app.js"></script>
+</body>
+</html>

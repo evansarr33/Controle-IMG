@@ -1,373 +1,72 @@
-/* ===========================================================
-   Contact Sheet — app.js
-   Charge data/images.json, synchronise les décisions avec
-   Firestore, gère la navigation clavier et les filtres.
-   =========================================================== */
-
-const STATUS = {
-  CONFORME: 'conforme',
-  NON_CONFORME: 'non_conforme',
-  RESERVE: 'reserve',
+const DB_COLLECTIONS = {
+  requests: 'demandes', documents: 'pieces_justificatives', users: 'utilisateurs', admins: 'administrateurs', history: 'historique_actions', criteria: 'parametres_notation'
 };
-
-const STATUS_LABEL = {
-  conforme: 'Conforme',
-  non_conforme: 'Non conforme',
-  reserve: 'Réservée',
-};
-
-let images = [];        // [{ public_id, url, thumb_url, format, width, height }]
-let reviews = {};        // { [public_id]: { status, comment, updatedAt } }
-let currentIndex = 0;
-let currentFilter = 'all';
-let db = null;
-let pendingReserveId = null;
-
-const els = {};
+const INITIAL_ADMIN_CODES = ['AAE-ADMIN-2026', 'AAE-COMMISSION-2026'];
+const steps = [
+  ['Identité', identityStep], ['Situation au CFA', cfaStep], ['Poursuite d’études', studyStep], ['Besoin informatique', needStep], ['Votre équipement', equipmentStep], ['Situation financière', financeStep], ['Situation personnelle', personalStep], ['Engagement associatif', associationStep], ['Motivation', motivationStep], ['Attestation', attestationStep],
+];
+const defaultData = { status:'Apprenti actuellement', level:'BTS', continues:'Non', nextLevel:'BTS', computerRequired:'Non', hasComputer:'Non', computerWorks:'Oui', computerAge:'moins de 2 ans', salary:0, scholarship:'Non', familyIssue:'Non', disability:'Non', cfaLife:'Non', truth:false, rules:false, date:new Date().toLocaleDateString('fr-FR') };
+const defaultCriteria = [
+  { id:'continues', label:'Poursuite d’études', points:30, active:true }, { id:'higher', label:'Entrée BTS/BUT/Licence/Bachelor/Master', points:20, active:true }, { id:'required', label:'Formation nécessitant un ordinateur', points:15, active:true }, { id:'noComputer', label:'Aucun ordinateur', points:25, active:true }, { id:'oldComputer', label:'Ordinateur de plus de 6 ans ou défectueux', points:10, active:true }, { id:'scholarship', label:'Boursier', points:20, active:true }, { id:'lowSalary', label:'Salaire < 1000 €', points:15, active:true }, { id:'midSalary', label:'Salaire entre 1000 € et 1400 €', points:10, active:true }, { id:'familyIssue', label:'Situation familiale difficile', points:15, active:true }, { id:'disability', label:'Handicap ou besoin spécifique', points:15, active:true }, { id:'cfaLife', label:'Participation à la vie du CFA', points:10, active:true },
+];
+let db = null, usingSupabase = false, data = { ...defaultData, ...readJson('aae-application', {}) }, currentStep = Number(localStorage.getItem('aae-step') || 0), criteria = readJson('aae-criteria', defaultCriteria), demandes = [], selectedRequestId = null;
 
 document.addEventListener('DOMContentLoaded', init);
+async function init(){ bindTheme(); initDb(); await loadCriteria(); if (document.body.dataset.page === 'demande') initCandidate(); if (document.body.dataset.page === 'admin') initAdmin(); if (!document.body.dataset.page) initHome(); }
+function bindTheme(){ document.querySelectorAll('[data-theme]').forEach(b=>b.onclick=()=>document.documentElement.classList.toggle('dark')); }
+function initDb(){ if (window.supabase && typeof supabaseConfig !== 'undefined' && supabaseConfig.url && supabaseConfig.anonKey) { db = window.supabase.createClient(supabaseConfig.url, supabaseConfig.anonKey); usingSupabase = true; } }
+function readJson(key, fallback){ try { return JSON.parse(localStorage.getItem(key) || 'null') || fallback; } catch { return fallback; } }
+function writeJson(key, value){ localStorage.setItem(key, JSON.stringify(value)); }
+async function loadCriteria(){ if (!usingSupabase) return; const { data: rows, error } = await db.from(DB_COLLECTIONS.criteria).select('*').order('created_at'); if (error) { console.warn(error); return; } if (!rows || rows.length === 0) { await db.from(DB_COLLECTIONS.criteria).upsert(defaultCriteria.map(c => ({ id:c.id, label:c.label, points:c.points, active:c.active }))); return; } criteria = rows.map(r => ({ id:r.id, label:r.label, points:r.points, active:r.active })); writeJson('aae-criteria', criteria); }
+async function saveCriterion(c){ writeJson('aae-criteria', criteria); if (usingSupabase) await db.from(DB_COLLECTIONS.criteria).upsert({ id:c.id, label:c.label, points:c.points, active:c.active }); }
+async function deleteCriterionDb(id){ if (usingSupabase) await db.from(DB_COLLECTIONS.criteria).delete().eq('id', id); }
+function toast(msg){ const t=document.getElementById('toast'); if(!t) return; t.textContent=msg; t.hidden=false; setTimeout(()=>t.hidden=true,3200); }
 
-window.addEventListener('error', (e) => {
-  showFatalError(`Erreur JavaScript : ${e.message}\n(fichier: ${e.filename}, ligne ${e.lineno})`);
-});
-window.addEventListener('unhandledrejection', (e) => {
-  showFatalError(`Erreur non gérée : ${e.reason?.message || e.reason}`);
-});
-
-function showFatalError(msg) {
-  const el = document.getElementById('fatalError');
-  if (!el) { console.error(msg); return; }
-  el.hidden = false;
-  el.textContent = '⚠ ' + msg;
-}
-
-async function init() {
-  try {
-    cacheEls();
-    bindStaticEvents();
-    initFirebase();
-    await loadManifest();
-    if (db) {
-      await loadReviews();
-    }
-    render();
-  } catch (err) {
-    console.error(err);
-    showFatalError(`Échec au démarrage : ${err.message}`);
-  }
-}
-
-function cacheEls() {
-  els.filmstrip = document.getElementById('filmstrip');
-  els.filmstripLoading = document.getElementById('filmstripLoading');
-  els.viewerFrame = document.getElementById('viewerFrame');
-  els.viewerEmpty = document.getElementById('viewerEmpty');
-  els.viewerImage = document.getElementById('viewerImage');
-  els.viewerStatusBadge = document.getElementById('viewerStatusBadge');
-  els.viewerMeta = document.getElementById('viewerMeta');
-  els.progressFill = document.getElementById('progressFill');
-  els.progressLabel = document.getElementById('progressLabel');
-  els.filters = document.getElementById('filters');
-  els.reservePanel = document.getElementById('reservePanel');
-  els.reserveComment = document.getElementById('reserveComment');
-  els.reserveCancel = document.getElementById('reserveCancel');
-  els.reserveConfirm = document.getElementById('reserveConfirm');
-  els.controls = document.getElementById('controls');
-  els.toast = document.getElementById('toast');
-
-  els.viewerImage.addEventListener('error', () => {
-    const img = images[currentIndex];
-    if (!img) return;
-    els.viewerEmpty.hidden = false;
-    els.viewerEmpty.innerHTML = `<p>Image impossible à charger.</p><p class="viewer-empty-sub">Vérifie l'URL dans <code>data/images.json</code> : ${escapeHtml(img.url || 'URL manquante')}</p>`;
-    showToast(`Image introuvable : ${img.public_id}`);
-  });
-}
+function initHome(){ const form=document.getElementById('trackingForm'); if(!form) return; form.onsubmit=trackRequest; }
+async function trackRequest(e){ e.preventDefault(); const name=document.getElementById('trackingName').value.trim().toLowerCase(), birth=document.getElementById('trackingBirth').value, box=document.getElementById('trackingResult'); let rows=[]; if(usingSupabase){ const { data: found } = await db.from(DB_COLLECTIONS.requests).select('*').ilike('nom', name).eq('date_naissance', birth).order('created_at', { ascending:false }); rows=(found||[]).map(fromSupabaseRequest); } else { rows=readJson('aae-demandes',[]).filter(r=>(r.lastName||'').toLowerCase()===name && r.birthDate===birth); } box.innerHTML=rows.length?rows.map(r=>`<article><strong>${escapeHtml(r.firstName||'')} ${escapeHtml(r.lastName||'')}</strong><span>${r.statut||'En attente'} · ${r.priority||'Priorité 4'} · ${r.score||0} pts</span><small>Dossier ${r.id} déposé le ${(r.createdAt||'').slice(0,10)}</small></article>`).join(''):'<p>Aucune demande trouvée avec ces informations.</p>'; }
 
 
-/* ---------------- Firebase ---------------- */
+function initCandidate(){ document.getElementById('prevStep').onclick=()=>move(-1); document.getElementById('nextStep').onclick=()=>currentStep===steps.length-1?submitApplication():move(1); document.getElementById('downloadPdf').onclick=()=>window.print(); renderCandidate(); }
+function saveDraft(){ writeJson('aae-application', data); localStorage.setItem('aae-step', currentStep); const p=document.getElementById('autosavePill'); if(p) p.textContent='Sauvegardé automatiquement'; }
+function move(delta){ currentStep=Math.max(0,Math.min(steps.length-1,currentStep+delta)); saveDraft(); renderCandidate(); scrollTo({top:0,behavior:'smooth'}); }
+function field(name,value){ data[name]=value; saveDraft(); renderCandidate(); }
+function input(name,label,type='text',extra=''){ return `<label>${label}<input name="${name}" type="${type}" value="${escapeHtml(data[name]||'')}" ${extra}></label>`; }
+function textarea(name,label,min=''){ return `<label class="full">${label}<textarea name="${name}" ${min} rows="6">${escapeHtml(data[name]||'')}</textarea></label>`; }
+function radio(name,label,opts){ return `<fieldset><legend>${label}</legend><div class="choice-grid">${opts.map(o=>`<label class="choice"><input type="radio" name="${name}" value="${o}" ${data[name]===o?'checked':''}>${o}</label>`).join('')}</div></fieldset>`; }
+function select(name,label,opts){ return `<label>${label}<select name="${name}">${opts.map(o=>`<option ${data[name]===o?'selected':''}>${o}</option>`).join('')}</select></label>`; }
+function files(name,label){ return `<label class="dropzone full">⇧ ${label}<input name="${name}" type="file" multiple><small>Les fichiers sont listés dans le dossier et leurs métadonnées sont enregistrées.</small></label>`; }
+function identityStep(){ return [input('lastName','Nom'),input('firstName','Prénom'),input('birthDate','Date de naissance','date'),input('phone','Téléphone','tel'),input('email','Email','email'),input('address','Adresse'),input('zip','Code postal'),input('city','Ville')].join(''); }
+function cfaStep(){ return radio('status','Êtes-vous :',['Apprenti actuellement','Ancien apprenti'])+input('formation','Formation actuelle')+select('level','Niveau',['CAP','Bac Pro','BTS','BUT','Licence','Bachelor','Master','Autre'])+input('company','Entreprise')+input('year','Année de formation'); }
+function studyStep(){ return radio('continues','Allez-vous poursuivre vos études à la prochaine rentrée ?',['Oui','Non'])+(data.continues==='Oui'?select('nextLevel','Formation prévue',['BTS','BUT','Licence','Bachelor','Master','École spécialisée','Autre'])+input('school','Établissement')+files('admissionDocs','Certificat d’admission, Parcoursup ou certificat de scolarité'):'<div class="info-box">Si vous êtes en recherche d’emploi, précisez le besoin informatique à l’étape suivante.</div>'); }
+function needStep(){ return radio('computerRequired','Votre future formation ou recherche d’emploi nécessite-t-elle un ordinateur personnel ?',['Oui','Non'])+textarea('softwareNeeds','Logiciels, plateformes, contraintes techniques ou usages prévus'); }
+function equipmentStep(){ return radio('hasComputer','Possédez-vous actuellement un ordinateur personnel ?',['Oui','Non'])+(data.hasComputer==='Non'?'<div class="success-box">Vous obtenez automatiquement les points liés à l’absence d’ordinateur.</div>':radio('computerWorks','L’ordinateur fonctionne-t-il ?',['Oui','Non'])+select('computerAge','Quel âge a-t-il ?',['moins de 2 ans','2 à 4 ans','4 à 6 ans','plus de 6 ans'])+files('computerPhoto','Photo de l’ordinateur et/ou justificatif de panne')); }
+function financeStep(){ return `<label class="full">Salaire mensuel net <strong>${data.salary} €</strong><input name="salary" type="range" min="0" max="2000" step="50" value="${data.salary}"></label>`+radio('scholarship','Êtes-vous boursier ?',['Oui','Non'])+files('salaryDocs','3 derniers bulletins de salaire')+files('scholarshipDoc','Attestation de bourse'); }
+function personalStep(){ return radio('familyIssue','Disposez-vous d’une situation familiale difficile ?',['Oui','Non'])+(data.familyIssue==='Oui'?textarea('familyText','Décrivez la situation')+files('familyDoc','Justificatif familial'):'')+radio('disability','Êtes-vous reconnu en situation de handicap ou avez-vous un besoin spécifique ?',['Oui','Non'])+(data.disability==='Oui'?textarea('disabilityText','Décrivez le besoin spécifique')+files('disabilityDoc','Justificatif handicap ou besoin spécifique'):''); }
+function associationStep(){ return radio('cfaLife','Avez-vous participé à la vie du CFA ou d’une association ?',['Oui','Non'])+(data.cfaLife==='Oui'?textarea('cfaLifeText','Décrire votre implication'):''); }
+function motivationStep(){ return textarea('motivation','Pourquoi souhaitez-vous bénéficier d’un ordinateur portable ?','minlength="300"')+`<div class="char-count">${(data.motivation||'').length}/300 caractères minimum</div>`; }
+function attestationStep(){ return `<label class="check full"><input type="checkbox" name="truth" ${data.truth?'checked':''}> Je certifie sur l’honneur que toutes les informations communiquées sont exactes.</label><label class="check full"><input type="checkbox" name="rules" ${data.rules?'checked':''}> J’accepte le règlement d’attribution.</label>${input('signature','Signature électronique')}<label>Date automatique<input name="date" readonly value="${data.date}"></label>`; }
+function renderCandidate(){ const [title,tpl]=steps[currentStep], pct=Math.round(currentStep/(steps.length-1)*100); document.getElementById('stepTitle').textContent=`Étape ${currentStep+1} — ${title}`; document.getElementById('progressPercent').textContent=pct+'%'; document.getElementById('progressFill').style.width=pct+'%'; document.getElementById('stepList').innerHTML=steps.map((s,i)=>`<li class="${i===currentStep?'active':''} ${i<currentStep?'done':''}"><span>${i+1}</span>${s[0]}</li>`).join(''); document.getElementById('stepContent').innerHTML=`<div class="field-grid">${tpl()}</div>`; document.getElementById('prevStep').disabled=currentStep===0; document.getElementById('nextStep').textContent=currentStep===steps.length-1?'Envoyer la demande':'Suivant'; document.querySelectorAll('#stepContent input,#stepContent select,#stepContent textarea').forEach(el=>{ const update=e=>{ data[e.target.name]=e.target.type==='checkbox'?e.target.checked:e.target.type==='file'?[...e.target.files].map(f=>({name:f.name,size:f.size,type:f.type})):e.target.value; saveDraft(); renderScore(); }; el.addEventListener('input', update); el.addEventListener('change', e=>{ update(e); if(['radio','checkbox','file'].includes(e.target.type)||e.target.tagName==='SELECT') renderCandidate(); }); }); renderScore(); }
+function score(){ const tests={continues:data.continues==='Oui',higher:data.continues==='Oui'&&['BTS','BUT','Licence','Bachelor','Master'].includes(data.nextLevel),required:data.computerRequired==='Oui',noComputer:data.hasComputer==='Non',oldComputer:data.computerAge==='plus de 6 ans'||data.computerWorks==='Non',scholarship:data.scholarship==='Oui',lowSalary:+data.salary<1000,midSalary:+data.salary>=1000&&+data.salary<=1400,familyIssue:data.familyIssue==='Oui',disability:data.disability==='Oui',cfaLife:data.cfaLife==='Oui'}; return criteria.filter(c=>c.active&&tests[c.id]).reduce((a,c)=>({total:a.total+(+c.points||0),lines:[...a.lines,c]}),{total:0,lines:[]}); }
+function priority(){ if(data.continues==='Oui'&&data.hasComputer==='Non') return 'Priorité 1'; if(data.continues==='Oui'&&(data.computerAge==='plus de 6 ans'||data.computerWorks==='Non')) return 'Priorité 2'; if(data.continues==='Non'&&data.computerRequired==='Oui') return 'Priorité 3'; return 'Priorité 4'; }
+function renderScore(){ const s=score(), p=priority(); document.getElementById('scoreValue').textContent=s.total; document.getElementById('priorityBadge').textContent=p; document.getElementById('scoreDetails').innerHTML=s.lines.map(l=>`<li><span>${l.label}</span><strong>+${l.points}</strong></li>`).join('')||'<li>Aucun critère déclenché.</li>'; }
+async function submitApplication(){ if(!data.truth||!data.rules||!data.signature) return toast('Attestation et signature obligatoires.'); if((data.motivation||'').length<300) return toast('La motivation doit contenir au moins 300 caractères.'); const s=score(), id='DEM-'+Date.now(); const request={id, ...data, score:s.total, priority:priority(), statut:'En attente', createdAt:new Date().toISOString(), scoring:s.lines}; await saveRequest(request); localStorage.removeItem('aae-application'); toast('Demande enregistrée. Email de réception simulé.'); setTimeout(()=>location.href='index.html',1300); }
+async function saveRequest(request){ const local=readJson('aae-demandes',[]); local.unshift(request); writeJson('aae-demandes',local); const docs=['admissionDocs','computerPhoto','salaryDocs','scholarshipDoc','familyDoc','disabilityDoc'].flatMap(k=>(data[k]||[]).map(f=>({requestId:request.id,pieceType:k,name:f.name,size:f.size,mimeType:f.type,createdAt:new Date().toISOString()}))); writeJson('aae-pieces',[...docs,...readJson('aae-pieces',[])]); writeJson('aae-history',[{requestId:request.id,action:'Dépôt de demande',at:new Date().toISOString()},...readJson('aae-history',[])]); if(usingSupabase){ await db.from(DB_COLLECTIONS.requests).insert(toSupabaseRequest(request)); if (docs.length) await db.from(DB_COLLECTIONS.documents).insert(docs.map(d => ({ demande_id:d.requestId, type_piece:d.pieceType, nom_fichier:d.name, taille:d.size, mime_type:d.mimeType, metadata:d }))); await db.from(DB_COLLECTIONS.history).insert({ demande_id:request.id, action:'Dépôt de demande' }); } }
 
-function initFirebase() {
-  if (typeof firebaseConfig === 'undefined' || !firebaseConfig || !firebaseConfig.apiKey || firebaseConfig.apiKey.startsWith('YOUR_')) {
-    console.warn('Firebase non configuré — voir firebase-config.js. Les décisions ne seront pas sauvegardées.');
-    return;
-  }
-  firebase.initializeApp(firebaseConfig);
-  db = firebase.firestore();
-}
+async function initAdmin(){ document.getElementById('loginForm').onsubmit=adminLogin; document.getElementById('logout').onclick=()=>{sessionStorage.removeItem('aae-admin'); location.reload();}; document.getElementById('adminSearch').oninput=renderAdmin; document.getElementById('statusFilter').onchange=renderAdmin; document.getElementById('priorityFilter').onchange=renderAdmin; document.getElementById('refreshAdmin').onclick=loadAdminData; document.getElementById('exportCsv').onclick=exportCsv; document.getElementById('addCriterion').onclick=addCriterion; document.getElementById('chatForm').onsubmit=sendChatMessage; if(sessionStorage.getItem('aae-admin')) openAdmin(); }
+async function adminLogin(e){ e.preventDefault(); const code=document.getElementById('adminCode').value.trim(), valid=readJson('aae-admin-codes',INITIAL_ADMIN_CODES).includes(code); if(!valid) return toast('Code administrateur invalide.'); sessionStorage.setItem('aae-admin','1'); openAdmin(); }
+async function openAdmin(){ document.getElementById('adminLogin').hidden=true; document.getElementById('adminApp').hidden=false; await loadAdminData(); }
+async function loadAdminData(){ if(usingSupabase){ const { data: rows, error } = await db.from(DB_COLLECTIONS.requests).select('*').order('score', { ascending:false }); demandes = error ? readJson('aae-demandes', seedRequests()) : rows.map(fromSupabaseRequest); } else { demandes=readJson('aae-demandes', seedRequests()); } document.getElementById('dbBanner').textContent=usingSupabase?'Base Supabase active : demandes, pièces, historiques et critères synchronisés.':'Mode démonstration localStorage : vérifie supabase-config.js et les policies RLS pour activer Supabase.'; renderAdmin(); }
+function seedRequests(){ return [['Lina Moreau','BTS SIO',105,'Priorité 1','2026-07-16','En attente'],['Adam Burel','BUT GEA',90,'Priorité 2','2026-07-15','Validée'],['Sarah Petit','Licence Pro',75,'Priorité 2','2026-07-14','En attente']].map((r,i)=>({id:'DEMO-'+i,lastName:r[0].split(' ')[1],firstName:r[0].split(' ')[0],formation:r[1],score:r[2],priority:r[3],createdAt:r[4],statut:r[5],email:'demo@aae.fr'})); }
+function renderAdmin(){ const q=document.getElementById('adminSearch').value.toLowerCase(), st=document.getElementById('statusFilter').value, pr=document.getElementById('priorityFilter').value; const rows=demandes.filter(r=>(st==='all'||r.statut===st)&&(pr==='all'||r.priority===pr)&&JSON.stringify(r).toLowerCase().includes(q)).sort((a,b)=>(b.score||0)-(a.score||0)); const total=demandes.length||1, valid=demandes.filter(r=>r.statut==='Validée').length, wait=demandes.filter(r=>r.statut==='En attente').length, refused=demandes.filter(r=>r.statut==='Refusée').length, avg=Math.round(demandes.reduce((a,r)=>a+(+r.score||0),0)/total); document.getElementById('kpiGrid').innerHTML=[['Demandes',demandes.length,'Total dossiers'],['Validées',valid,Math.round(valid/total*100)+'% du total'],['En attente',wait,'À traiter'],['Refusées',refused,Math.round(refused/total*100)+'% du total'],['Score moyen',avg,'Notation dynamique']].map(k=>`<article><span>${k[0]}</span><strong>${k[1]}</strong><small>${k[2]}</small></article>`).join(''); document.getElementById('requestsTable').innerHTML=rows.map(r=>`<tr><td>${escapeHtml((r.firstName||'')+' '+(r.lastName||''))}</td><td>${escapeHtml(r.formation||r.level||'')}</td><td>${r.score||0}</td><td><span class="prio ${r.priority?.slice(-1).toLowerCase()||'4'}">${r.priority||'Priorité 4'}</span></td><td>${(r.createdAt||'').slice(0,10)}</td><td>${r.statut||'En attente'}</td><td><button onclick="showDetail('${r.id}')">Voir</button> <button onclick="setStatus('${r.id}','Validée')">Valider</button> <button onclick="setStatus('${r.id}','Refusée')">Refuser</button></td></tr>`).join(''); renderCriteria(); showDetail(rows[0]?.id); document.getElementById('donutText').textContent='P1 '+Math.round(demandes.filter(r=>r.priority==='Priorité 1').length/total*100)+'%'; }
+window.showDetail=async(id)=>{ selectedRequestId=id; const r=demandes.find(d=>d.id===id); document.getElementById('requestDetail').innerHTML=r?`<h3>${escapeHtml((r.firstName||'')+' '+(r.lastName||''))}</h3><p>${escapeHtml(r.email||'')} · ${escapeHtml(r.phone||'')}</p><p><strong>${r.score||0} points</strong> · ${r.priority}</p><p>${escapeHtml(r.motivation||'Motivation non disponible sur dossier démo.')}</p><textarea placeholder="Commentaires internes"></textarea><div class="history">Historique : dépôt, scoring, notifications email, décisions admin.</div><button class="btn secondary small" onclick="window.print()">Télécharger PDF</button>`:'<p>Aucune demande sélectionnée.</p>'; await loadChatMessages(id); };
+window.setStatus=async(id,statut)=>{ const r=demandes.find(d=>d.id===id); if(!r) return; r.statut=statut; r.updatedAt=new Date().toISOString(); writeJson('aae-demandes',demandes); if(usingSupabase){ await db.from(DB_COLLECTIONS.requests).update({ statut, updated_at:r.updatedAt }).eq('id', id); await db.from(DB_COLLECTIONS.history).insert({ demande_id:id, action:statut }); } toast(`Demande ${statut.toLowerCase()}e. Email simulé envoyé.`); renderAdmin(); };
+function renderCriteria(){ const el=document.getElementById('criteriaList'); if(!el) return; el.innerHTML=criteria.map((c,i)=>`<div><input type="checkbox" ${c.active?'checked':''} onchange="toggleCriterion(${i},this.checked)"><input value="${escapeHtml(c.label)}" onchange="renameCriterion(${i},this.value)"><input type="number" value="${c.points}" onchange="setCriterion(${i},this.value)"><button onclick="deleteCriterion(${i})">×</button></div>`).join(''); }
+window.toggleCriterion=async(i,v)=>{criteria[i].active=v; await saveCriterion(criteria[i]); renderAdmin();}; window.renameCriterion=async(i,v)=>{criteria[i].label=v; await saveCriterion(criteria[i]);}; window.setCriterion=async(i,v)=>{criteria[i].points=+v; await saveCriterion(criteria[i]); renderAdmin();}; window.deleteCriterion=async(i)=>{const [c]=criteria.splice(i,1); await deleteCriterionDb(c.id); writeJson('aae-criteria',criteria); renderAdmin();};
+function addCriterion(){ const c={id:'custom-'+Date.now(),label:'Nouveau critère',points:5,active:true}; criteria.push(c); saveCriterion(c); renderAdmin(); }
+async function loadChatMessages(id){ const box=document.getElementById('chatMessages'); if(!box) return; if(!id){ box.innerHTML='<p class="muted">Sélectionnez une demande.</p>'; return; } let messages=readJson('aae-chat',[]).filter(m=>m.demande_id===id); if(usingSupabase){ const { data: rows } = await db.from('messages_internes').select('*').eq('demande_id', id).order('created_at'); messages=rows||messages; } box.innerHTML=messages.length?messages.map(m=>`<div class="chat-message"><strong>${escapeHtml(m.auteur||'Commission')}</strong><span>${escapeHtml(m.message||'')}</span><small>${(m.created_at||m.createdAt||'').slice(0,16).replace('T',' ')}</small></div>`).join(''):'<p class="muted">Aucun message interne.</p>'; }
+async function sendChatMessage(e){ e.preventDefault(); const input=document.getElementById('chatInput'); const message=input.value.trim(); if(!selectedRequestId||!message) return; const entry={demande_id:selectedRequestId,auteur:'Commission',message,createdAt:new Date().toISOString()}; writeJson('aae-chat',[...readJson('aae-chat',[]),entry]); if(usingSupabase) await db.from('messages_internes').insert({ demande_id:selectedRequestId, auteur:'Commission', message }); input.value=''; await loadChatMessages(selectedRequestId); }
+function exportCsv(){ const csv='Nom,Formation,Score,Priorité,Date,Statut\n'+demandes.map(r=>[`"${(r.firstName||'')+' '+(r.lastName||'')}"`,r.formation||'',r.score||0,r.priority||'',r.createdAt||'',r.statut||''].join(',')).join('\n'); const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download='demandes-aae.csv'; a.click(); }
+function escapeHtml(s){ return String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
 
-async function loadReviews() {
-  try {
-    const snap = await db.collection('reviews').get();
-    snap.forEach(doc => { reviews[doc.id] = doc.data(); });
-  } catch (err) {
-    console.error('Impossible de charger les décisions Firestore :', err);
-    showToast('Erreur de connexion à Firestore — vérifie firebase-config.js et les règles de sécurité.');
-  }
-}
-
-async function saveReview(publicId, status, comment) {
-  const entry = { status, comment: comment || '', updatedAt: Date.now() };
-  reviews[publicId] = entry;
-  render();
-  if (!db) {
-    showToast('Non sauvegardé — Firebase non configuré (voir README).');
-    return;
-  }
-  try {
-    await db.collection('reviews').doc(publicId).set(entry);
-  } catch (err) {
-    console.error(err);
-    showToast('Échec de la sauvegarde Firestore.');
-  }
-}
-
-/* ---------------- Manifest ---------------- */
-
-async function loadManifest() {
-  const manifestUrl = new URL('data/images.json', document.baseURI).href;
-  try {
-    const res = await fetch('data/images.json', { cache: 'no-store' });
-    if (!res.ok) {
-      throw new Error(`data/images.json a répondu ${res.status} ${res.statusText} (URL testée : ${manifestUrl})`);
-    }
-    const text = await res.text();
-    try {
-      images = JSON.parse(text);
-    } catch (parseErr) {
-      throw new Error(`data/images.json n'est pas un JSON valide : ${parseErr.message}`);
-    }
-    if (!Array.isArray(images)) {
-      throw new Error('data/images.json ne contient pas une liste (tableau [...]).');
-    }
-  } catch (err) {
-    console.error(err);
-    images = [];
-    showFatalError(err.message);
-  }
-  els.filmstripLoading.hidden = images.length > 0;
-  if (images.length === 0) {
-    els.filmstripLoading.textContent = `Aucune image chargée depuis ${manifestUrl}`;
-  }
-}
-
-/* ---------------- Rendering ---------------- */
-
-function getFilteredIndices() {
-  return images
-    .map((img, i) => i)
-    .filter(i => {
-      const status = reviews[images[i].public_id]?.status;
-      if (currentFilter === 'all') return true;
-      if (currentFilter === 'untreated') return !status;
-      return status === currentFilter;
-    });
-}
-
-function render() {
-  renderFilmstrip();
-  renderViewer();
-  renderProgress();
-}
-
-function renderFilmstrip() {
-  els.filmstrip.querySelectorAll('.frame-item').forEach(n => n.remove());
-  const frag = document.createDocumentFragment();
-  images.forEach((img, i) => {
-    if (currentFilter !== 'all') {
-      const status = reviews[img.public_id]?.status;
-      const matches = currentFilter === 'untreated' ? !status : status === currentFilter;
-      if (!matches) return;
-    }
-    const item = document.createElement('div');
-    item.className = 'frame-item' + (i === currentIndex ? ' selected' : '');
-    item.tabIndex = 0;
-    item.dataset.index = i;
-    const status = reviews[img.public_id]?.status;
-    item.innerHTML = `
-      <img class="frame-thumb" src="${img.thumb_url || img.url}" alt="" loading="lazy">
-      <div class="frame-info">
-        <div class="frame-index">#${String(i + 1).padStart(3, '0')}</div>
-        <div class="frame-name">${escapeHtml(img.public_id)}</div>
-      </div>
-      <div class="frame-dot ${status || ''}"></div>
-    `;
-    item.addEventListener('click', () => { currentIndex = i; render(); scrollToSelected(); });
-    frag.appendChild(item);
-  });
-  els.filmstrip.appendChild(frag);
-}
-
-function scrollToSelected() {
-  const sel = els.filmstrip.querySelector('.frame-item.selected');
-  if (sel) sel.scrollIntoView({ block: 'nearest' });
-}
-
-function renderViewer() {
-  const img = images[currentIndex];
-  closeReservePanel();
-
-  if (!img) {
-    els.viewerEmpty.hidden = false;
-    els.viewerImage.hidden = true;
-    els.viewerStatusBadge.hidden = true;
-    els.viewerMeta.textContent = '';
-    els.controls.style.opacity = 0.4;
-    els.controls.style.pointerEvents = 'none';
-    return;
-  }
-
-  els.controls.style.opacity = 1;
-  els.controls.style.pointerEvents = 'auto';
-  els.viewerEmpty.hidden = true;
-  els.viewerImage.hidden = false;
-  els.viewerImage.src = img.url;
-  els.viewerImage.alt = img.public_id;
-  els.viewerEmpty.innerHTML = `<p>Aucune image chargée.</p><p class="viewer-empty-sub">Génère <code>data/images.json</code> avec le script d'import, puis recharge la page.</p>`;
-
-  const status = reviews[img.public_id]?.status;
-  if (status) {
-    els.viewerStatusBadge.hidden = false;
-    els.viewerStatusBadge.textContent = STATUS_LABEL[status];
-    els.viewerStatusBadge.className = 'viewer-status-badge ' + status;
-  } else {
-    els.viewerStatusBadge.hidden = true;
-  }
-
-  const dims = img.width && img.height ? `${img.width}×${img.height}px` : '';
-  const meta = [`#${currentIndex + 1} / ${images.length}`, img.format?.toUpperCase(), dims].filter(Boolean).join('  ·  ');
-  els.viewerMeta.textContent = meta;
-
-  if (status === STATUS.RESERVE && reviews[img.public_id]?.comment) {
-    els.viewerMeta.textContent += `  ·  « ${reviews[img.public_id].comment} »`;
-  }
-}
-
-function renderProgress() {
-  const total = images.length;
-  const done = images.filter(img => reviews[img.public_id]?.status).length;
-  els.progressFill.style.width = total ? `${(done / total) * 100}%` : '0%';
-  els.progressLabel.textContent = `${done} / ${total} traitées`;
-}
-
-/* ---------------- Decisions ---------------- */
-
-function handleDecision(action) {
-  const img = images[currentIndex];
-  if (!img) return;
-
-  if (action === STATUS.RESERVE) {
-    openReservePanel();
-    return;
-  }
-
-  saveReview(img.public_id, action, '');
-  advanceToNext();
-}
-
-function openReservePanel() {
-  const img = images[currentIndex];
-  pendingReserveId = img.public_id;
-  els.reservePanel.hidden = false;
-  els.reserveComment.value = reviews[img.public_id]?.comment || '';
-  els.reserveComment.focus();
-}
-
-function closeReservePanel() {
-  els.reservePanel.hidden = true;
-  pendingReserveId = null;
-}
-
-function confirmReserve() {
-  if (!pendingReserveId) return;
-  const comment = els.reserveComment.value.trim();
-  saveReview(pendingReserveId, STATUS.RESERVE, comment);
-  closeReservePanel();
-  advanceToNext();
-}
-
-function advanceToNext() {
-  const visible = getFilteredIndices();
-  const pos = visible.indexOf(currentIndex);
-  if (pos !== -1 && pos + 1 < visible.length) {
-    currentIndex = visible[pos + 1];
-  } else if (currentIndex + 1 < images.length) {
-    currentIndex += 1;
-  }
-  render();
-  scrollToSelected();
-}
-
-function moveSelection(delta) {
-  const visible = getFilteredIndices();
-  if (visible.length === 0) return;
-  const pos = visible.indexOf(currentIndex);
-  let nextPos = pos === -1 ? 0 : pos + delta;
-  nextPos = Math.max(0, Math.min(visible.length - 1, nextPos));
-  currentIndex = visible[nextPos];
-  render();
-  scrollToSelected();
-}
-
-/* ---------------- Events ---------------- */
-
-function bindStaticEvents() {
-  els.controls.querySelectorAll('.keycap').forEach(btn => {
-    btn.addEventListener('click', () => handleDecision(btn.dataset.action));
-  });
-
-  els.reserveCancel.addEventListener('click', closeReservePanel);
-  els.reserveConfirm.addEventListener('click', confirmReserve);
-
-  els.filters.querySelectorAll('.filter-chip').forEach(chip => {
-    chip.addEventListener('click', () => {
-      currentFilter = chip.dataset.filter;
-      els.filters.querySelectorAll('.filter-chip').forEach(c => c.classList.toggle('active', c === chip));
-      const visible = getFilteredIndices();
-      if (visible.length && !visible.includes(currentIndex)) currentIndex = visible[0];
-      render();
-    });
-  });
-
-  document.addEventListener('keydown', onKeydown);
-}
-
-function onKeydown(e) {
-  const reserveOpen = !els.reservePanel.hidden;
-
-  if (reserveOpen) {
-    if (e.key === 'Escape') { closeReservePanel(); }
-    else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey || document.activeElement !== els.reserveComment)) { confirmReserve(); }
-    return;
-  }
-
-  if (document.activeElement && ['TEXTAREA', 'INPUT'].includes(document.activeElement.tagName)) return;
-
-  switch (e.key) {
-    case '1': handleDecision(STATUS.NON_CONFORME); break;
-    case '2': handleDecision(STATUS.CONFORME); break;
-    case '3': handleDecision(STATUS.RESERVE); break;
-    case 'ArrowDown': e.preventDefault(); moveSelection(1); break;
-    case 'ArrowUp': e.preventDefault(); moveSelection(-1); break;
-  }
-}
-
-/* ---------------- Toast ---------------- */
-
-let toastTimer = null;
-function showToast(msg) {
-  els.toast.textContent = msg;
-  els.toast.hidden = false;
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { els.toast.hidden = true; }, 3500);
-}
-
-
-function escapeHtml(value) {
-  return String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
-}
+function toSupabaseRequest(r){ return { id:r.id, prenom:r.firstName||'', nom:r.lastName||'', email:r.email||'', telephone:r.phone||'', date_naissance:r.birthDate||null, adresse:r.address||'', code_postal:r.zip||'', ville:r.city||'', statut_cfa:r.status||'', formation:r.formation||'', niveau:r.level||'', entreprise:r.company||'', annee_formation:r.year||'', poursuite_etudes:r.continues==='Oui', formation_prevue:r.nextLevel||'', etablissement:r.school||'', ordinateur_requis:r.computerRequired==='Oui', possede_ordinateur:r.hasComputer==='Oui', ordinateur_fonctionne:r.computerWorks==='Oui', age_ordinateur:r.computerAge||'', salaire_net:Number(r.salary||0), boursier:r.scholarship==='Oui', situation_familiale_difficile:r.familyIssue==='Oui', handicap:r.disability==='Oui', engagement_cfa:r.cfaLife==='Oui', motivation:r.motivation||'', signature:r.signature||'', score:r.score||0, priorite:r.priority||'Priorité 4', statut:r.statut||'En attente', payload:r }; }
+function fromSupabaseRequest(r){ return { id:r.id, firstName:r.prenom, lastName:r.nom, email:r.email, phone:r.telephone, formation:r.formation, level:r.niveau, score:r.score, priority:r.priorite, statut:r.statut, createdAt:r.created_at, motivation:r.motivation, ...((r.payload&&typeof r.payload==='object')?r.payload:{}) }; }

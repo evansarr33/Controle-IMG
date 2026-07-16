@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Administration - AAE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"><link rel="stylesheet" href="style.css">
+</head>
+<body data-page="admin">
+  <div class="admin-login" id="adminLogin"><form class="login-card" id="loginForm"><span class="brand-logo">AAE</span><p class="eyebrow">Accès protégé</p><h1>Interface administrateur</h1><p>Entrez un code administrateur pour accéder aux demandes, critères, statistiques et exports.</p><input id="adminCode" type="password" placeholder="Code administrateur" autocomplete="current-password"><button class="btn primary" type="submit">Se connecter</button><small>Codes initiaux : AAE-ADMIN-2026 ou AAE-COMMISSION-2026, modifiables dans Supabase/localStorage.</small></form></div>
+  <section class="admin-shell" id="adminApp" hidden>
+    <aside class="admin-sidebar"><a class="brand" href="index.html"><span class="brand-logo">AAE</span><span><strong>Admin</strong><small>Dossiers PC</small></span></a><a class="active">Dashboard</a><a>Demandes</a><a>Critères</a><a>Statistiques</a><a>Utilisateurs</a><a>Paramètres</a><button class="btn ghost" id="logout" type="button">Déconnexion</button></aside>
+    <div class="admin-main"><header class="admin-header"><input id="adminSearch" type="search" placeholder="Rechercher nom, formation, statut…"><select id="statusFilter"><option value="all">Tous statuts</option><option>En attente</option><option>Validée</option><option>Refusée</option></select><select id="priorityFilter"><option value="all">Toutes priorités</option><option>Priorité 1</option><option>Priorité 2</option><option>Priorité 3</option><option>Priorité 4</option></select><button class="theme-toggle" data-theme type="button">☾</button></header>
+      <div class="db-banner" id="dbBanner"></div><div class="kpi-grid" id="kpiGrid"></div>
+      <div class="admin-grid"><section class="admin-card wide"><div class="card-title"><h2>Demandes</h2><div><button class="btn secondary small" id="exportCsv" type="button">Export CSV</button><button class="btn ghost small" id="refreshAdmin" type="button">Actualiser</button></div></div><div class="table-wrap"><table><thead><tr><th>Nom</th><th>Formation</th><th>Score</th><th>Priorité</th><th>Date</th><th>Statut</th><th>Actions</th></tr></thead><tbody id="requestsTable"></tbody></table></div></section>
+      <section class="admin-card"><h2>Fiche demande</h2><div id="requestDetail" class="request-detail"></div></section><section class="admin-card"><h2>Chat interne</h2><div class="chat-box" id="chatMessages"></div><form class="chat-form" id="chatForm"><input id="chatInput" placeholder="Message interne commission…"><button class="btn primary small" type="submit">Envoyer</button></form></section><section class="admin-card"><div class="card-title"><h2>Critères</h2><button class="btn primary small" id="addCriterion" type="button">Ajouter</button></div><div id="criteriaList" class="criteria-list"></div></section><section class="admin-card"><h2>Statistiques</h2><div class="chart-bars"><span style="--h:55%"></span><span style="--h:70%"></span><span style="--h:42%"></span><span style="--h:88%"></span><span style="--h:63%"></span></div><div class="donut"><span>Priorités<br><strong id="donutText">P1 0%</strong></span></div></section></div>
+    </div>
+  </section>
+  <div class="toast" id="toast" hidden></div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="supabase-config.js"></script><script src="app.js"></script>
+</body>
+</html>
