@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contrôle conformité — Contact Sheet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app" id="app">
+
+  <!-- Barre supérieure -->
+  <header class="topbar">
+    <div class="topbar-brand">
+      <span class="brand-mark">◍</span>
+      <span class="brand-name">Contact&nbsp;Sheet</span>
+    </div>
+    <div class="progress" id="progress">
+      <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+      <span class="progress-label" id="progressLabel">0 / 0 traitées</span>
+    </div>
+    <div class="topbar-filters" id="filters">
+      <button class="filter-chip active" data-filter="all">Toutes</button>
+      <button class="filter-chip" data-filter="untreated">Non traitées</button>
+      <button class="filter-chip" data-filter="conforme">Conformes</button>
+      <button class="filter-chip" data-filter="non_conforme">Non conformes</button>
+      <button class="filter-chip" data-filter="reserve">Réservées</button>
+    </div>
+  </header>
+
+  <div class="body-layout">
+
+    <!-- Bandeau film (liste des images) -->
+    <aside class="filmstrip" id="filmstrip">
+      <div class="filmstrip-loading" id="filmstripLoading">Chargement du manifeste…</div>
+    </aside>
+
+    <!-- Visionneuse principale -->
+    <main class="viewer">
+      <div class="viewer-frame" id="viewerFrame">
+        <div class="viewer-empty" id="viewerEmpty">
+          <p>Aucune image chargée.</p>
+          <p class="viewer-empty-sub">Génère <code>data/images.json</code> avec le script d'import, puis recharge la page.</p>
+        </div>
+        <img id="viewerImage" class="viewer-image" alt="" hidden>
+        <div class="viewer-status-badge" id="viewerStatusBadge" hidden></div>
+      </div>
+
+      <div class="viewer-meta" id="viewerMeta"></div>
+
+      <div class="reserve-panel" id="reservePanel" hidden>
+        <label for="reserveComment">Commentaire de réserve</label>
+        <textarea id="reserveComment" rows="3" placeholder="Décris la raison de la réserve…"></textarea>
+        <div class="reserve-actions">
+          <button class="btn btn-ghost" id="reserveCancel">Annuler (Échap)</button>
+          <button class="btn btn-reserve" id="reserveConfirm">Valider la réserve (Entrée)</button>
+        </div>
+      </div>
+
+      <div class="controls" id="controls">
+        <button class="keycap keycap-non-conforme" data-action="non_conforme">
+          <span class="keycap-key">1</span>
+          <span class="keycap-label">Non conforme</span>
+        </button>
+        <button class="keycap keycap-conforme" data-action="conforme">
+          <span class="keycap-key">2</span>
+          <span class="keycap-label">Conforme</span>
+        </button>
+        <button class="keycap keycap-reserve" data-action="reserve">
+          <span class="keycap-key">3</span>
+          <span class="keycap-label">Réserve</span>
+        </button>
+      </div>
+
+      <div class="nav-hint">↑ / ↓ pour naviguer &nbsp;·&nbsp; 1 / 2 / 3 pour trancher</div>
+    </main>
+
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<!-- Firebase (SDK compat, simple à mettre en place sans bundler) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
