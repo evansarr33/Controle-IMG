@@ -1,93 +1,129 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Contrôle conformité — Contact Sheet</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Demande d'ordinateur - Association des Apprentis de l'Estuaire</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div id="fatalError" class="fatal-error" hidden></div>
-<div class="app" id="app">
+  <div class="app-shell">
+    <nav class="nav-glass">
+      <a class="brand" href="#home" aria-label="Accueil AAE">
+        <span class="brand-logo">AAE</span>
+        <span><strong>Apprentis de l'Estuaire</strong><small>Demande d'ordinateur</small></span>
+      </a>
+      <div class="nav-links">
+        <a href="#application">Candidat</a>
+        <a href="#admin">Admin</a>
+        <button class="theme-toggle" id="themeToggle" type="button">☾</button>
+      </div>
+    </nav>
 
-  <!-- Barre supérieure -->
-  <header class="topbar">
-    <div class="topbar-brand">
-      <span class="brand-mark">◍</span>
-      <span class="brand-name">Contact&nbsp;Sheet</span>
-    </div>
-    <div class="progress" id="progress">
-      <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
-      <span class="progress-label" id="progressLabel">0 / 0 traitées</span>
-    </div>
-    <div class="topbar-filters" id="filters">
-      <button class="filter-chip active" data-filter="all">Toutes</button>
-      <button class="filter-chip" data-filter="untreated">Non traitées</button>
-      <button class="filter-chip" data-filter="conforme">Conformes</button>
-      <button class="filter-chip" data-filter="non_conforme">Non conformes</button>
-      <button class="filter-chip" data-filter="reserve">Réservées</button>
-    </div>
-  </header>
-
-  <div class="body-layout">
-
-    <!-- Bandeau film (liste des images) -->
-    <aside class="filmstrip" id="filmstrip">
-      <div class="filmstrip-loading" id="filmstripLoading">Chargement du manifeste…</div>
-    </aside>
-
-    <!-- Visionneuse principale -->
-    <main class="viewer">
-      <div class="viewer-frame" id="viewerFrame">
-        <div class="viewer-empty" id="viewerEmpty">
-          <p>Aucune image chargée.</p>
-          <p class="viewer-empty-sub">Génère <code>data/images.json</code> avec le script d'import, puis recharge la page.</p>
+    <main>
+      <section class="hero section" id="home">
+        <div class="hero-copy">
+          <p class="eyebrow">Campagne d'attribution 2026</p>
+          <h1>Demande d'attribution d'un ordinateur portable</h1>
+          <p class="hero-lead">L'Association des Apprentis de l'Estuaire met gratuitement à disposition des ordinateurs portables reconditionnés afin d'aider les apprentis qui en ont le plus besoin.</p>
+          <p>Les demandes sont étudiées selon plusieurs critères objectifs. Merci de remplir ce formulaire avec sincérité.</p>
+          <div class="hero-actions">
+            <a class="btn primary" href="#application">Commencer ma demande</a>
+            <a class="btn ghost" href="#admin">Voir l'interface admin</a>
+          </div>
         </div>
-        <img id="viewerImage" class="viewer-image" alt="" hidden>
-        <div class="viewer-status-badge" id="viewerStatusBadge" hidden></div>
-      </div>
-
-      <div class="viewer-meta" id="viewerMeta"></div>
-
-      <div class="reserve-panel" id="reservePanel" hidden>
-        <label for="reserveComment">Commentaire de réserve</label>
-        <textarea id="reserveComment" rows="3" placeholder="Décris la raison de la réserve…"></textarea>
-        <div class="reserve-actions">
-          <button class="btn btn-ghost" id="reserveCancel">Annuler (Échap)</button>
-          <button class="btn btn-reserve" id="reserveConfirm">Valider la réserve (Entrée)</button>
+        <div class="hero-card">
+          <div class="score-ring"><span id="heroScore">0</span><small>points</small></div>
+          <div>
+            <h3>Priorité calculée en direct</h3>
+            <p id="heroPriority">Priorité 4 · dossier à compléter</p>
+          </div>
+          <div class="mini-grid">
+            <span>Auto-save</span><strong id="saveState">Prêt</strong>
+            <span>Étapes</span><strong id="heroStep">1 / 10</strong>
+            <span>Pièces</span><strong id="docCount">0</strong>
+          </div>
         </div>
-      </div>
+      </section>
 
-      <div class="controls" id="controls">
-        <button class="keycap keycap-non-conforme" data-action="non_conforme">
-          <span class="keycap-key">1</span>
-          <span class="keycap-label">Non conforme</span>
-        </button>
-        <button class="keycap keycap-conforme" data-action="conforme">
-          <span class="keycap-key">2</span>
-          <span class="keycap-label">Conforme</span>
-        </button>
-        <button class="keycap keycap-reserve" data-action="reserve">
-          <span class="keycap-key">3</span>
-          <span class="keycap-label">Réserve</span>
-        </button>
-      </div>
+      <section class="section form-layout" id="application">
+        <aside class="steps-panel">
+          <div class="progress-header"><span>Progression</span><strong id="progressPercent">0%</strong></div>
+          <div class="progress-track"><div id="progressFill"></div></div>
+          <ol class="step-list" id="stepList"></ol>
+        </aside>
 
-      <div class="nav-hint">↑ / ↓ pour naviguer &nbsp;·&nbsp; 1 / 2 / 3 pour trancher</div>
+        <form class="application-card" id="applicationForm">
+          <div class="form-topline">
+            <div><p class="eyebrow">Questionnaire candidat</p><h2 id="stepTitle">Étape 1 — Identité</h2></div>
+            <span class="pill" id="autosavePill">Sauvegarde locale active</span>
+          </div>
+          <div id="stepContent"></div>
+          <div class="form-actions">
+            <button class="btn ghost" id="prevStep" type="button">Précédent</button>
+            <button class="btn secondary" id="downloadPdf" type="button">PDF récapitulatif</button>
+            <button class="btn primary" id="nextStep" type="button">Suivant</button>
+          </div>
+        </form>
+
+        <aside class="decision-panel">
+          <div class="panel-card sticky-card">
+            <p class="eyebrow">Score automatique</p>
+            <div class="big-score"><span id="scoreValue">0</span><small>pts</small></div>
+            <div class="priority-badge" id="priorityBadge">Priorité 4</div>
+            <ul class="score-details" id="scoreDetails"></ul>
+          </div>
+        </aside>
+      </section>
+
+      <section class="section admin-shell" id="admin">
+        <aside class="admin-sidebar">
+          <div class="admin-brand">Admin AAE</div>
+          <a class="active">Dashboard</a><a>Demandes</a><a>Critères</a><a>Statistiques</a><a>Utilisateurs</a><a>Paramètres</a>
+        </aside>
+        <div class="admin-main">
+          <header class="admin-header">
+            <input id="adminSearch" type="search" placeholder="Rechercher une demande, formation, statut…">
+            <select id="statusFilter"><option value="all">Tous statuts</option><option>En attente</option><option>Validée</option><option>Refusée</option></select>
+            <div class="avatar">AD</div>
+          </header>
+
+          <div class="kpi-grid">
+            <article><span>Demandes</span><strong>42</strong><small>+12 cette semaine</small></article>
+            <article><span>Validées</span><strong>18</strong><small>43% du total</small></article>
+            <article><span>En attente</span><strong>20</strong><small>À traiter</small></article>
+            <article><span>Refusées</span><strong>4</strong><small>9% du total</small></article>
+            <article><span>Score moyen</span><strong id="avgScore">64</strong><small>Notation dynamique</small></article>
+          </div>
+
+          <div class="admin-grid">
+            <section class="admin-card wide">
+              <div class="card-title"><h3>Demandes à traiter</h3><button class="btn secondary small" id="exportCsv" type="button">Export CSV</button></div>
+              <div class="filter-row"><select id="priorityFilter"><option value="all">Toutes priorités</option><option>P1</option><option>P2</option><option>P3</option><option>P4</option></select><select><option>Toutes formations</option><option>BTS</option><option>BUT</option><option>Master</option></select><input type="number" placeholder="Score min."></div>
+              <div class="table-wrap"><table><thead><tr><th>Nom</th><th>Formation</th><th>Score</th><th>Priorité</th><th>Date</th><th>Statut</th><th>Actions</th></tr></thead><tbody id="requestsTable"></tbody></table></div>
+            </section>
+            <section class="admin-card">
+              <h3>Fiche demande</h3>
+              <div id="requestDetail" class="request-detail"></div>
+            </section>
+            <section class="admin-card">
+              <div class="card-title"><h3>Critères de notation</h3><button class="btn primary small" id="addCriterion" type="button">Ajouter</button></div>
+              <div id="criteriaList" class="criteria-list"></div>
+            </section>
+            <section class="admin-card">
+              <h3>Statistiques</h3>
+              <div class="chart-bars"><span style="--h:55%"></span><span style="--h:70%"></span><span style="--h:42%"></span><span style="--h:88%"></span><span style="--h:63%"></span></div>
+              <div class="donut"><span>Priorités<br><strong>P1 31%</strong></span></div>
+            </section>
+          </div>
+        </div>
+      </section>
     </main>
-
   </div>
-</div>
-
-<div class="toast" id="toast" hidden></div>
-
-<!-- Firebase (SDK compat, simple à mettre en place sans bundler) -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="firebase-config.js"></script>
-<script src="app.js"></script>
+  <div class="toast" id="toast" hidden></div>
+  <script src="app.js"></script>
 </body>
 </html>
