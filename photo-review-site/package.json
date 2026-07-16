@@ -1,0 +1,13 @@
+{
+  "name": "photo-review-manifest-tool",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Script local pour générer data/images.json depuis Cloudinary (non lié au site statique lui-même).",
+  "scripts": {
+    "generate-manifest": "node scripts/generate-manifest.js"
+  },
+  "dependencies": {
+    "cloudinary": "^1.41.3",
+    "dotenv": "^16.4.5"
+  }
+}
