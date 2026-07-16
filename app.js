@@ -27,15 +27,34 @@ const els = {};
 
 document.addEventListener('DOMContentLoaded', init);
 
+window.addEventListener('error', (e) => {
+  showFatalError(`Erreur JavaScript : ${e.message}\n(fichier: ${e.filename}, ligne ${e.lineno})`);
+});
+window.addEventListener('unhandledrejection', (e) => {
+  showFatalError(`Erreur non gérée : ${e.reason?.message || e.reason}`);
+});
+
+function showFatalError(msg) {
+  const el = document.getElementById('fatalError');
+  if (!el) { console.error(msg); return; }
+  el.hidden = false;
+  el.textContent = '⚠ ' + msg;
+}
+
 async function init() {
-  cacheEls();
-  bindStaticEvents();
-  initFirebase();
-  await loadManifest();
-  if (db) {
-    await loadReviews();
+  try {
+    cacheEls();
+    bindStaticEvents();
+    initFirebase();
+    await loadManifest();
+    if (db) {
+      await loadReviews();
+    }
+    render();
+  } catch (err) {
+    console.error(err);
+    showFatalError(`Échec au démarrage : ${err.message}`);
   }
-  render();
 }
 
 function cacheEls() {
@@ -97,17 +116,29 @@ async function saveReview(publicId, status, comment) {
 /* ---------------- Manifest ---------------- */
 
 async function loadManifest() {
+  const manifestUrl = new URL('data/images.json', document.baseURI).href;
   try {
     const res = await fetch('data/images.json', { cache: 'no-store' });
-    if (!res.ok) throw new Error('images.json introuvable');
-    images = await res.json();
+    if (!res.ok) {
+      throw new Error(`data/images.json a répondu ${res.status} ${res.statusText} (URL testée : ${manifestUrl})`);
+    }
+    const text = await res.text();
+    try {
+      images = JSON.parse(text);
+    } catch (parseErr) {
+      throw new Error(`data/images.json n'est pas un JSON valide : ${parseErr.message}`);
+    }
+    if (!Array.isArray(images)) {
+      throw new Error('data/images.json ne contient pas une liste (tableau [...]).');
+    }
   } catch (err) {
     console.error(err);
     images = [];
+    showFatalError(err.message);
   }
   els.filmstripLoading.hidden = images.length > 0;
   if (images.length === 0) {
-    els.filmstripLoading.textContent = 'Aucune image — génère data/images.json (voir README).';
+    els.filmstripLoading.textContent = `Aucune image chargée depuis ${manifestUrl}`;
   }
 }
 
