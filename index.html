@@ -1,93 +1,43 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Contrôle conformité — Contact Sheet</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Demande d'ordinateur - Association des Apprentis de l'Estuaire</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div id="fatalError" class="fatal-error" hidden></div>
-<div class="app" id="app">
-
-  <!-- Barre supérieure -->
-  <header class="topbar">
-    <div class="topbar-brand">
-      <span class="brand-mark">◍</span>
-      <span class="brand-name">Contact&nbsp;Sheet</span>
-    </div>
-    <div class="progress" id="progress">
-      <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
-      <span class="progress-label" id="progressLabel">0 / 0 traitées</span>
-    </div>
-    <div class="topbar-filters" id="filters">
-      <button class="filter-chip active" data-filter="all">Toutes</button>
-      <button class="filter-chip" data-filter="untreated">Non traitées</button>
-      <button class="filter-chip" data-filter="conforme">Conformes</button>
-      <button class="filter-chip" data-filter="non_conforme">Non conformes</button>
-      <button class="filter-chip" data-filter="reserve">Réservées</button>
-    </div>
-  </header>
-
-  <div class="body-layout">
-
-    <!-- Bandeau film (liste des images) -->
-    <aside class="filmstrip" id="filmstrip">
-      <div class="filmstrip-loading" id="filmstripLoading">Chargement du manifeste…</div>
-    </aside>
-
-    <!-- Visionneuse principale -->
-    <main class="viewer">
-      <div class="viewer-frame" id="viewerFrame">
-        <div class="viewer-empty" id="viewerEmpty">
-          <p>Aucune image chargée.</p>
-          <p class="viewer-empty-sub">Génère <code>data/images.json</code> avec le script d'import, puis recharge la page.</p>
-        </div>
-        <img id="viewerImage" class="viewer-image" alt="" hidden>
-        <div class="viewer-status-badge" id="viewerStatusBadge" hidden></div>
+  <nav class="nav-glass">
+    <a class="brand" href="index.html"><span class="brand-logo">AAE</span><span><strong>Apprentis de l'Estuaire</strong><small>Attribution ordinateurs</small></span></a>
+    <div class="nav-links"><a href="demande.html">Demande</a><a href="admin.html">Admin</a><button class="theme-toggle" data-theme type="button">☾</button></div>
+  </nav>
+  <main class="home-page">
+    <section class="hero section" id="home">
+      <div class="hero-copy">
+        <p class="eyebrow">Campagne d'attribution 2026</p>
+        <h1>Demande d'attribution d'un ordinateur portable</h1>
+        <p class="hero-lead">L'Association des Apprentis de l'Estuaire met gratuitement à disposition des ordinateurs portables reconditionnés afin d'aider les apprentis qui en ont le plus besoin.</p>
+        <p>Les demandes sont étudiées selon plusieurs critères objectifs. Merci de remplir ce formulaire avec sincérité.</p>
+        <div class="hero-actions"><a class="btn primary" href="demande.html">Commencer ma demande</a><a class="btn ghost" href="admin.html">Espace administrateur</a></div>
       </div>
-
-      <div class="viewer-meta" id="viewerMeta"></div>
-
-      <div class="reserve-panel" id="reservePanel" hidden>
-        <label for="reserveComment">Commentaire de réserve</label>
-        <textarea id="reserveComment" rows="3" placeholder="Décris la raison de la réserve…"></textarea>
-        <div class="reserve-actions">
-          <button class="btn btn-ghost" id="reserveCancel">Annuler (Échap)</button>
-          <button class="btn btn-reserve" id="reserveConfirm">Valider la réserve (Entrée)</button>
-        </div>
+      <div class="hero-card">
+        <div class="score-ring"><span>10</span><small>étapes</small></div>
+        <h2>Un dossier complet, sécurisé et suivi</h2>
+        <div class="mini-grid"><span>Sauvegarde</span><strong>Automatique</strong><span>Base</span><strong>Firestore / local</strong><span>Admin</span><strong>Code protégé</strong><span>PDF</span><strong>Impression</strong></div>
       </div>
-
-      <div class="controls" id="controls">
-        <button class="keycap keycap-non-conforme" data-action="non_conforme">
-          <span class="keycap-key">1</span>
-          <span class="keycap-label">Non conforme</span>
-        </button>
-        <button class="keycap keycap-conforme" data-action="conforme">
-          <span class="keycap-key">2</span>
-          <span class="keycap-label">Conforme</span>
-        </button>
-        <button class="keycap keycap-reserve" data-action="reserve">
-          <span class="keycap-key">3</span>
-          <span class="keycap-label">Réserve</span>
-        </button>
-      </div>
-
-      <div class="nav-hint">↑ / ↓ pour naviguer &nbsp;·&nbsp; 1 / 2 / 3 pour trancher</div>
-    </main>
-
-  </div>
-</div>
-
-<div class="toast" id="toast" hidden></div>
-
-<!-- Firebase (SDK compat, simple à mettre en place sans bundler) -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="firebase-config.js"></script>
-<script src="app.js"></script>
+    </section>
+    <section class="section feature-grid">
+      <article><h3>Questionnaire candidat très complet</h3><p>Identité, CFA, poursuite d'études, situation matérielle, financière, personnelle, motivation, pièces justificatives et attestation.</p></article>
+      <article><h3>Scoring transparent</h3><p>Points dynamiques, critères activables, priorités P1 à P4 et historique de chaque modification.</p></article>
+      <article><h3>Administration dédiée</h3><p>Dashboard, demandes, filtres, validation/refus, commentaires internes, export CSV/PDF et paramètres de notation.</p></article>
+    </section>
+  </main>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
