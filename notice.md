@@ -25,6 +25,7 @@ Le script crée :
 - `administrateurs`
 - `historique_actions`
 - `parametres_notation`
+- `messages_internes`
 
 Il ajoute aussi les critères de notation par défaut et active des policies RLS de démonstration compatibles avec un site statique.
 
@@ -63,8 +64,13 @@ python3 -m http.server 4173
    - `AAE-COMMISSION-2026`
 3. Vérifie que les demandes remontent depuis Supabase.
 4. Teste : recherche, filtres, validation, refus, export CSV, modification des critères.
+5. Sélectionne une demande et teste le chat interne de la commission.
 
-## 6. Stockage des fichiers
+## 6. Suivi candidat
+
+Depuis la page d'accueil, le bouton **Suivre ma demande** permet à un candidat de retrouver son dossier avec son nom et sa date de naissance. Le site interroge Supabase si la base est active, sinon le stockage local de démonstration.
+
+## 7. Stockage des fichiers
 
 Actuellement, le navigateur enregistre les métadonnées des fichiers dans `pieces_justificatives` : nom, taille, type MIME, catégorie. Pour stocker les vrais fichiers :
 
@@ -72,7 +78,7 @@ Actuellement, le navigateur enregistre les métadonnées des fichiers dans `piec
 2. Ajoute une policy d'upload adaptée.
 3. Étends `app.js` pour appeler `db.storage.from('justificatifs').upload(...)` avant l'insertion dans `pieces_justificatives`.
 
-## 7. Mise en production sécurisée
+## 8. Mise en production sécurisée
 
 Les policies incluses dans `supabase.sql` sont volontairement simples pour que le site fonctionne directement avec la clé anon. Pour une production sérieuse :
 

@@ -21,12 +21,25 @@
         <h1>Demande d'attribution d'un ordinateur portable</h1>
         <p class="hero-lead">L'Association des Apprentis de l'Estuaire met gratuitement à disposition des ordinateurs portables reconditionnés afin d'aider les apprentis qui en ont le plus besoin.</p>
         <p>Les demandes sont étudiées selon plusieurs critères objectifs. Merci de remplir ce formulaire avec sincérité.</p>
-        <div class="hero-actions"><a class="btn primary" href="demande.html">Commencer ma demande</a><a class="btn ghost" href="admin.html">Espace administrateur</a></div>
+        <div class="hero-actions"><a class="btn primary" href="demande.html">Commencer ma demande</a><a class="btn ghost" href="#suivi">Suivre ma demande</a><a class="btn ghost" href="admin.html">Espace administrateur</a></div>
       </div>
       <div class="hero-card">
         <div class="score-ring"><span>10</span><small>étapes</small></div>
         <h2>Un dossier complet, sécurisé et suivi</h2>
         <div class="mini-grid"><span>Sauvegarde</span><strong>Automatique</strong><span>Base</span><strong>Supabase / local</strong><span>Admin</span><strong>Code protégé</strong><span>PDF</span><strong>Impression</strong></div>
+      </div>
+    </section>
+    <section class="section tracking-section" id="suivi">
+      <div class="institution-card">
+        <p class="eyebrow">Suivi candidat</p>
+        <h2>Suivre ma demande</h2>
+        <p>Renseignez votre nom et votre date de naissance pour retrouver l'état de votre dossier.</p>
+        <form class="tracking-form" id="trackingForm">
+          <label>Nom<input id="trackingName" type="text" autocomplete="family-name" required></label>
+          <label>Date de naissance<input id="trackingBirth" type="date" required></label>
+          <button class="btn primary" type="submit">Consulter mon suivi</button>
+        </form>
+        <div class="tracking-result" id="trackingResult"></div>
       </div>
     </section>
     <section class="section feature-grid">

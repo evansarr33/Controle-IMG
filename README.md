@@ -4,7 +4,7 @@ Application web statique multi-pages pour gérer les demandes d'attribution d'or
 
 - `index.html` : page d'accueil publique.
 - `demande.html` : questionnaire candidat en 10 étapes avec sauvegarde automatique, scoring et dépôt en base.
-- `admin.html` : espace administrateur protégé par code, dashboard, demandes, critères, validation/refus, exports.
+- `admin.html` : espace administrateur protégé par code, dashboard, demandes, chat interne, critères, validation/refus, exports.
 - `supabase.sql` : script SQL complet à exécuter dans Supabase.
 - `notice.md` : procédure pas à pas pour rendre le projet fonctionnel.
 
@@ -20,6 +20,7 @@ Tables prévues :
 - `administrateurs`
 - `historique_actions`
 - `parametres_notation`
+- `messages_internes`
 
 Les pièces jointes sont enregistrées comme métadonnées côté navigateur. Pour stocker les fichiers réels en production, ajouter Supabase Storage comme expliqué dans `notice.md`.
 

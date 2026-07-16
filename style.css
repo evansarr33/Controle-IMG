@@ -557,3 +557,62 @@ hr{
   .admin-header{
     grid-template-columns:1fr}
 }
+/* Institutionnel AAE */
+.nav-glass{
+  border-bottom:1px solid rgba(37,99,235,.18)}
+.hero h1{
+  max-width:980px}
+.institution-card{
+  max-width:980px;
+  margin:auto;
+  background:linear-gradient(180deg,var(--surface),var(--card));
+  border:1px solid var(--line);
+  border-radius:32px;
+  box-shadow:var(--shadow);
+  padding:34px}
+.tracking-form{
+  display:grid;
+  grid-template-columns:1fr 1fr auto;
+  gap:14px;
+  align-items:end;
+  margin-top:18px}
+.tracking-result{
+  display:grid;
+  gap:12px;
+  margin-top:18px}
+.tracking-result article{
+  display:grid;
+  gap:4px;
+  padding:16px;
+  border:1px solid var(--line);
+  border-radius:18px;
+  background:rgba(37,99,235,.06)}
+.chat-box{
+  min-height:220px;
+  max-height:360px;
+  overflow:auto;
+  display:grid;
+  align-content:start;
+  gap:10px;
+  padding:12px;
+  border:1px solid var(--line);
+  border-radius:18px;
+  background:rgba(15,23,42,.03)}
+.chat-message{
+  display:grid;
+  gap:4px;
+  padding:12px;
+  border-radius:16px;
+  background:var(--card);
+  border:1px solid var(--line)}
+.chat-message small{
+  color:var(--muted)}
+.chat-form{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:10px;
+  margin-top:10px}
+@media(max-width:760px){
+  .tracking-form,.chat-form{
+    grid-template-columns:1fr}
+}

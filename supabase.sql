@@ -80,6 +80,15 @@ create table if not exists public.historique_actions (
   metadata jsonb not null default '{}'::jsonb
 );
 
+
+create table if not exists public.messages_internes (
+  id uuid primary key default gen_random_uuid(),
+  demande_id text not null references public.demandes(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  auteur text not null default 'Commission',
+  message text not null
+);
+
 create table if not exists public.parametres_notation (
   id text primary key,
   created_at timestamptz not null default now(),
@@ -124,6 +133,7 @@ alter table public.utilisateurs enable row level security;
 alter table public.administrateurs enable row level security;
 alter table public.historique_actions enable row level security;
 alter table public.parametres_notation enable row level security;
+alter table public.messages_internes enable row level security;
 
 -- Policies simples pour que le site statique fonctionne avec la clé anon.
 -- Pour une production stricte, remplacez-les par Supabase Auth + rôles admin.
@@ -138,6 +148,8 @@ drop policy if exists "anon_all_pieces" on public.pieces_justificatives;
 create policy "anon_all_pieces" on public.pieces_justificatives for all to anon using (true) with check (true);
 drop policy if exists "anon_all_historique" on public.historique_actions;
 create policy "anon_all_historique" on public.historique_actions for all to anon using (true) with check (true);
+drop policy if exists "anon_all_messages" on public.messages_internes;
+create policy "anon_all_messages" on public.messages_internes for all to anon using (true) with check (true);
 drop policy if exists "anon_read_notation" on public.parametres_notation;
 create policy "anon_read_notation" on public.parametres_notation for select to anon using (true);
 drop policy if exists "anon_write_notation" on public.parametres_notation;
