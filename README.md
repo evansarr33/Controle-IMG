@@ -5,12 +5,14 @@ Application web statique multi-pages pour gérer les demandes d'attribution d'or
 - `index.html` : page d'accueil publique.
 - `demande.html` : questionnaire candidat en 10 étapes avec sauvegarde automatique, scoring et dépôt en base.
 - `admin.html` : espace administrateur protégé par code, dashboard, demandes, critères, validation/refus, exports.
+- `supabase.sql` : script SQL complet à exécuter dans Supabase.
+- `notice.md` : procédure pas à pas pour rendre le projet fonctionnel.
 
 ## Base de données
 
-L'application utilise Firebase Firestore si `firebase-config.js` contient une configuration Web Firebase valide. Sinon, elle fonctionne en démonstration avec `localStorage`.
+L'application utilise Supabase si `supabase-config.js` contient l'URL du projet et la clé `anon`. Sinon, elle continue à fonctionner en démonstration avec `localStorage`.
 
-Collections prévues :
+Tables prévues :
 
 - `demandes`
 - `pieces_justificatives`
@@ -19,7 +21,7 @@ Collections prévues :
 - `historique_actions`
 - `parametres_notation`
 
-Les pièces jointes sont enregistrées comme métadonnées côté navigateur. Pour stocker les fichiers réels en production, ajouter Firebase Storage ou un backend sécurisé.
+Les pièces jointes sont enregistrées comme métadonnées côté navigateur. Pour stocker les fichiers réels en production, ajouter Supabase Storage comme expliqué dans `notice.md`.
 
 ## Accès admin
 
@@ -28,23 +30,11 @@ Codes initiaux de démonstration :
 - `AAE-ADMIN-2026`
 - `AAE-COMMISSION-2026`
 
-Ils peuvent être remplacés en production par Firebase Auth ou par une collection `administrateurs` sécurisée par règles Firestore.
+Pour une vraie production, remplacer ces codes par Supabase Auth et des policies RLS strictes.
 
-## Règles Firestore minimales à durcir
+## Sécurité
 
-```js
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /demandes/{id} { allow read, write: if true; }
-    match /pieces_justificatives/{id} { allow read, write: if true; }
-    match /historique_actions/{id} { allow read, write: if true; }
-    match /parametres_notation/{id} { allow read, write: if true; }
-  }
-}
-```
-
-Pour une vraie mise en production, remplacer ces règles par Firebase Auth + rôles administrateurs.
+Ne jamais exposer la clé `service_role` ou la `secret key` Supabase dans le front-end. Le site charge uniquement la clé `anon` publique depuis `supabase-config.js`.
 
 ## Test local
 
